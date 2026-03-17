@@ -1,0 +1,18 @@
+{
+  "name": "playmat-studio-shopify-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web",
+    "start": "npm run start --workspace=web",
+    "shopify": "shopify app"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,27 @@
+name = "Playmat Studio"
+client_id = "SHOPIFY_API_KEY"
+application_url = "https://your-app.railway.app"
+embedded = true
+
+[access_scopes]
+# Scopes needed: read orders (for print downloader), write script tags (for theme injection)
+scopes = "read_orders,write_orders,read_products,write_script_tags,read_customers"
+
+[auth]
+redirect_urls = [
+  "https://your-app.railway.app/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/api/webhooks/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/create"]
+  uri = "/api/webhooks/orders-create"
+
+[pos]
+embedded = false

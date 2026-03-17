@@ -1,0 +1,19 @@
+# Theme App Extension — replaces the hand-edited playmat-designer.liquid snippet.
+# Merchants add this as an App Block inside any product page section.
+
+api_version = "2025-01"
+
+[[extensions]]
+name = "Playmat Designer"
+handle = "playmat-designer"
+type = "theme"
+
+  [extensions.development]
+    # Serve extension assets from the app dev server during `shopify app dev`
+    resource = "/"
+    root_url = "/"
+
+  [[extensions.targeting]]
+  target = "section"                # can be placed in any section
+  template = "*"
+  schema_location = "blocks/playmat-designer.liquid"

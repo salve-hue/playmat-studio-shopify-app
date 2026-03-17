@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playmat Studio — Admin</title>
+  <!-- Shopify App Bridge 3 -->
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+  <!-- Polaris CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@12.0.0/build/esm/styles.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f6f6f7; }
+    .ps-layout { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+    .ps-card { background: #fff; border-radius: 8px; border: 1px solid #e1e3e5; padding: 20px; margin-bottom: 20px; }
+    .ps-card h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; color: #202223; }
+    .ps-card p.hint { margin: 0 0 16px; font-size: 13px; color: #6d7175; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #202223; margin-bottom: 4px; margin-top: 12px; }
+    label:first-child { margin-top: 0; }
+    input[type=text], input[type=url], input[type=number], textarea, select {
+      width: 100%; padding: 8px 10px; border: 1px solid #c9cccf; border-radius: 6px;
+      font-size: 14px; color: #202223; background: #fff;
+    }
+    input:focus, textarea:focus, select:focus { outline: 2px solid #2c6ecb; outline-offset: -1px; }
+    textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 12px; }
+    .ps-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .ps-row { grid-template-columns: 1fr; } }
+    .ps-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+    .ps-btn-primary { background: #2c6ecb; color: #fff; }
+    .ps-btn-primary:hover { background: #1f5199; }
+    .ps-btn-primary:disabled { background: #b8c7e0; cursor: not-allowed; }
+    .ps-btn-secondary { background: #fff; color: #202223; border: 1px solid #c9cccf; }
+    .ps-btn-secondary:hover { background: #f6f6f7; }
+    .ps-btn-danger { background: #d82c0d; color: #fff; }
+    .ps-actions { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+    .ps-toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #202223; color: #fff;
+      border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999; }
+    .ps-toast.show { opacity: 1; }
+    .ps-toast.error { background: #d82c0d; }
+    .ps-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+      background: #f0f7ff; color: #2c6ecb; border: 1px solid #b8cde4; margin-left: 8px; vertical-align: middle; }
+    .ps-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ps-table th { text-align: left; padding: 8px 10px; background: #f6f6f7; border-bottom: 1px solid #e1e3e5; font-weight: 600; }
+    .ps-table td { padding: 8px 10px; border-bottom: 1px solid #f1f2f3; vertical-align: top; }
+    .ps-table tr:last-child td { border-bottom: none; }
+    .ps-table input[type=text], .ps-table input[type=number] { padding: 4px 8px; font-size: 12px; }
+    .ps-table .del-btn { background: none; border: none; color: #d82c0d; cursor: pointer; font-size: 16px; padding: 0 4px; }
+    .add-row-btn { margin-top: 10px; }
+    .ps-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: #6d7175; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .loading { text-align: center; padding: 40px; color: #6d7175; font-size: 14px; }
+    .ps-tabs { display: flex; gap: 2px; border-bottom: 2px solid #e1e3e5; margin-bottom: 20px; }
+    .ps-tab { padding: 10px 18px; font-size: 14px; font-weight: 500; color: #6d7175; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -2px; background: none; border-left: none;
+      border-right: none; border-top: none; }
+    .ps-tab.active { color: #2c6ecb; border-bottom-color: #2c6ecb; }
+    .ps-tab-content { display: none; }
+    .ps-tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="ps-layout">
+  <div id="root">
+    <div class="loading">Loading settings…</div>
+  </div>
+</div>
+
+<div id="ps-toast" class="ps-toast"></div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function toast(msg, isError = false) {
+  const el = document.getElementById('ps-toast');
+  el.textContent = msg;
+  el.className = 'ps-toast show' + (isError ? ' error' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let settings = null;
+
+// ── Load settings ──────────────────────────────────────────────────────────────
+async function load() {
+  try {
+    const data = await api('GET', '/api/settings');
+    settings = data.settings;
+    render();
+  } catch (err) {
+    document.getElementById('root').innerHTML =
+      `<div class="ps-card"><p style="color:#d82c0d;">Failed to load settings: ${err.message}</p></div>`;
+  }
+}
+
+// ── Save settings ──────────────────────────────────────────────────────────────
+async function save() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    await api('PUT', '/api/settings', settings);
+    toast('✓ Settings saved');
+  } catch (err) {
+    toast('Save failed: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Settings';
+  }
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.ps-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('.ps-tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + id));
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+  const s = settings;
+
+  document.getElementById('root').innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1 style="margin:0; font-size:22px; color:#202223;">Playmat Studio</h1>
+        <p style="margin:4px 0 0; font-size:13px; color:#6d7175;">App Settings</p>
+      </div>
+      <div class="ps-actions" style="margin:0;">
+        <button class="ps-btn ps-btn-primary" id="save-btn" onclick="save()">Save Settings</button>
+      </div>
+    </div>
+
+    <div class="ps-tabs">
+      <button class="ps-tab active" data-tab="workers" onclick="switchTab('workers')">Worker URLs</button>
+      <button class="ps-tab" data-tab="sizes"   onclick="switchTab('sizes')">Mat Sizes</button>
+      <button class="ps-tab" data-tab="products" onclick="switchTab('products')">Products</button>
+      <button class="ps-tab" data-tab="overlays" onclick="switchTab('overlays')">Game Overlays</button>
+    </div>
+
+    <!-- WORKER URLS TAB -->
+    <div id="tab-workers" class="ps-tab-content active">
+      <div class="ps-card">
+        <h2>Cloudflare Worker URLs</h2>
+        <p class="hint">Update these when you redeploy Workers. Changes take effect within 60 seconds on all storefronts (cached by CDN).</p>
+        <label>R2 Upload Worker URL</label>
+        <input type="url" id="url-upload" value="${esc(s.workerUrls.upload)}"
+          oninput="settings.workerUrls.upload = this.value"
+          placeholder="https://playmat-r2-upload.yourdomain.workers.dev/" />
+        <label>AI Upscale Worker URL</label>
+        <input type="url" id="url-upscale" value="${esc(s.workerUrls.upscale)}"
+          oninput="settings.workerUrls.upscale = this.value"
+          placeholder="https://playmat-upscaler.yourdomain.workers.dev" />
+        <label>Background Removal Worker URL</label>
+        <input type="url" id="url-bgremove" value="${esc(s.workerUrls.bgRemove)}"
+          oninput="settings.workerUrls.bgRemove = this.value"
+          placeholder="https://playmat-removebg.yourdomain.workers.dev/" />
+      </div>
+    </div>
+
+    <!-- MAT SIZES TAB -->
+    <div id="tab-sizes" class="ps-tab-content">
+      <div class="ps-card">
+        <h2>Mat Size Database</h2>
+        <p class="hint">Canvas dimensions in inches (including 0.25" bleed on each side). Print resolution = w×300 × h×300 px.</p>
+        <table class="ps-table">
+          <thead><tr><th>Key</th><th>Width (in)</th><th>Height (in)</th><th>Label</th><th></th></tr></thead>
+          <tbody id="sizes-tbody">${renderSizeRows(s.sizeDb)}</tbody>
+        </table>
+        <button class="ps-btn ps-btn-secondary add-row-btn" onclick="addSizeRow()">+ Add Size</button>
+      </div>
+    </div>
+
+    <!-- PRODUCTS TAB -->
+    <div id="tab-products" class="ps-tab-content">
+      <div class="ps-card">
+        <h2>Product → Size Map</h2>
+        <p class="hint">Maps Shopify product IDs to size keys. Products not listed here default to <code>standard</code>.</p>
+        <table class="ps-table">
+          <thead><tr><th>Product ID</th><th>Size Key</th><th></th></tr></thead>
+          <tbody id="psmap-tbody">${renderProductSizeRows(s.productSizeMap)}</tbody>
+        </table>
+        <button class="ps-btn ps-btn-secondary add-row-btn" onclick="addProductSizeRow()">+ Add Product</button>
+      </div>
+      <div class="ps-card" style="margin-top:0;">
+        <h2>Always-Show Product IDs</h2>
+        <p class="hint">Products that always show the designer regardless of variant selection. One ID per line.</p>
+        <textarea id="always-show-ids" rows="8" oninput="syncAlwaysShow()">${(s.alwaysShowProductIds || []).join('\n')}</textarea>
+      </div>
+    </div>
+
+    <!-- OVERLAYS TAB -->
+    <div id="tab-overlays" class="ps-tab-content">
+      <div class="ps-card">
+        <h2>Game Overlay Database <span class="ps-badge">${(s.layoutRaw || []).length} overlays</span></h2>
+        <p class="hint">
+          Add or remove game layout overlays. <strong>Leave URL blank</strong> for "Points Only" format entries.
+          Size should match a size key (Standard, Extended, etc.).
+          Changes here <strong>override</strong> the built-in defaults — paste the full list from the liquid file to start.
+        </p>
+        <textarea id="overlays-json" rows="14"
+          placeholder='Paste JSON array of overlay objects here, e.g.:\n[{"game":"Magic: the Gathering","format":"60-card","size":"Standard","hand":"Left","url":"https://..."}]'
+          oninput="syncOverlays(this.value)">${s.layoutRaw && s.layoutRaw.length ? JSON.stringify(s.layoutRaw, null, 2) : ''}</textarea>
+        <p id="overlays-error" style="color:#d82c0d; font-size:12px; margin-top:6px; display:none;"></p>
+      </div>
+      <div class="ps-card">
+        <h2>Riftbound Points Overlays</h2>
+        <p class="hint">Map point-style keys to R2 image URLs. Leave a URL blank to disable that style.</p>
+        <table class="ps-table">
+          <thead><tr><th>Key</th><th>URL</th></tr></thead>
+          <tbody>${renderRbPointsRows(s.rbPointsDb)}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── Row renderers ──────────────────────────────────────────────────────────────
+function esc(v) { return String(v || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function renderSizeRows(db) {
+  return Object.entries(db || {}).map(([key, v]) => `
+    <tr data-key="${esc(key)}">
+      <td><input type="text" value="${esc(key)}" onchange="renameSizeKey('${esc(key)}', this.value)" style="width:90px;"></td>
+      <td><input type="number" value="${v.w}" step="0.5" min="1" onchange="settings.sizeDb['${esc(key)}'].w = parseFloat(this.value)" style="width:70px;"></td>
+      <td><input type="number" value="${v.h}" step="0.5" min="1" onchange="settings.sizeDb['${esc(key)}'].h = parseFloat(this.value)" style="width:70px;"></td>
+      <td><input type="text" value="${esc(v.label)}" onchange="settings.sizeDb['${esc(key)}'].label = this.value"></td>
+      <td><button class="del-btn" onclick="deleteSizeRow('${esc(key)}')">×</button></td>
+    </tr>`).join('');
+}
+
+function renderProductSizeRows(map) {
+  return Object.entries(map || {}).map(([id, key]) => `
+    <tr data-id="${esc(id)}">
+      <td><input type="text" value="${esc(id)}" onchange="renamePSKey('${esc(id)}', this.value)" style="width:160px;"></td>
+      <td><input type="text" value="${esc(key)}" onchange="settings.productSizeMap['${esc(id)}'] = this.value" style="width:120px;"></td>
+      <td><button class="del-btn" onclick="deletePSRow('${esc(id)}')">×</button></td>
+    </tr>`).join('');
+}
+
+function renderRbPointsRows(db) {
+  const keys = ['basic','basic_1_14','project','project_1_14','lunar','lunar_1_14','khasino'];
+  return keys.map(k => `
+    <tr>
+      <td style="white-space:nowrap; font-family:monospace;">${esc(k)}</td>
+      <td><input type="url" value="${esc((db || {})[k] || '')}"
+        oninput="settings.rbPointsDb['${esc(k)}'] = this.value || undefined"
+        placeholder="https://…" style="font-size:11px;"></td>
+    </tr>`).join('');
+}
+
+// ── Mutation helpers ───────────────────────────────────────────────────────────
+function renameSizeKey(old, neo) {
+  if (!neo || neo === old) return;
+  settings.sizeDb[neo] = settings.sizeDb[old];
+  delete settings.sizeDb[old];
+}
+function deleteSizeRow(key) {
+  delete settings.sizeDb[key];
+  document.querySelector(`#sizes-tbody tr[data-key="${key}"]`)?.remove();
+}
+function addSizeRow() {
+  const key = prompt('New size key (e.g. "jumbo"):');
+  if (!key) return;
+  settings.sizeDb[key] = { w: 24.5, h: 14.5, label: key };
+  document.getElementById('sizes-tbody').insertAdjacentHTML('beforeend',
+    renderSizeRows({ [key]: settings.sizeDb[key] }));
+}
+function renamePSKey(old, neo) {
+  if (!neo || neo === old) return;
+  settings.productSizeMap[neo] = settings.productSizeMap[old];
+  delete settings.productSizeMap[old];
+}
+function deletePSRow(id) {
+  delete settings.productSizeMap[id];
+  document.querySelector(`#psmap-tbody tr[data-id="${id}"]`)?.remove();
+}
+function addProductSizeRow() {
+  const id = prompt('Shopify product ID:');
+  if (!id) return;
+  settings.productSizeMap[id] = 'standard';
+  document.getElementById('psmap-tbody').insertAdjacentHTML('beforeend',
+    renderProductSizeRows({ [id]: 'standard' }));
+}
+function syncAlwaysShow() {
+  settings.alwaysShowProductIds = document.getElementById('always-show-ids').value
+    .split('\n').map(l => l.trim()).filter(Boolean).map(Number).filter(n => !isNaN(n));
+}
+function syncOverlays(raw) {
+  const errEl = document.getElementById('overlays-error');
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('Must be a JSON array');
+    settings.layoutRaw = parsed;
+    errEl.style.display = 'none';
+  } catch (e) {
+    errEl.textContent = 'Invalid JSON: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,602 @@
+{% comment %}
+  Playmat Studio — App Block
+  Replaces: playmat-designer-v1.7.1.liquid (hand-edited theme snippet)
+
+  This block is served by the Playmat Studio Shopify app (Theme App Extension).
+  Merchants add it via the Theme Editor on any product section.
+
+  Configuration is managed in the app admin (Railway backend) — no more
+  editing Liquid code to update Worker URLs, product maps, or overlay lists.
+
+  Schema settings still available here:
+    app_url            — Railway app base URL (set once at install)
+    trigger_variant    — Option 1 text that shows the designer
+    landing_padding    — Top/bottom padding for the landing button area
+    size_variant_keyword — keyword to detect Extended mat variant
+{% endcomment %}
+
+{%- liquid
+  assign app_url           = section.settings.app_url | default: ''
+  assign trigger_variant   = section.settings.trigger_variant | default: ''
+  assign landing_padding   = section.settings.landing_padding | default: 10
+  assign size_kw           = section.settings.size_variant_keyword | default: ''
+  assign shop_domain       = shop.permanent_domain
+-%}
+
+{{ 'playmat-designer.css' | asset_url | stylesheet_tag }}
+
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Cinzel:wght@400;700&family=Dancing+Script:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Permanent+Marker&family=Press+Start+2P&family=Roboto:wght@400;500;600;700&family=Shadows+Into+Light&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.3/dist/browser/umd/index.min.js" defer></script>
+
+{%- comment %} Pass Liquid values to JS before any other script runs {%- endcomment %}
+<script>
+  window.PLAYMAT_APP_URL         = {{ app_url | json }};
+  window.PLAYMAT_SHOP            = {{ shop_domain | json }};
+  window.PLAYMAT_TRIGGER_VARIANT = {{ trigger_variant | json }};
+  window.PLAYMAT_LANDING_PADDING = {{ landing_padding | json }};
+  window.PLAYMAT_SIZE_KW         = {{ size_kw | json }};
+  window.PLAYMAT_PRODUCT_ID      = {{ product.id | json }};
+</script>
+
+{{ 'playmat-designer-bootstrap.js' | asset_url | script_tag }}
+
+{%- comment %} ─── HTML STRUCTURE (identical to v1.7.1 liquid) ──────────────── {%- endcomment %}
+
+<div id="fs-backdrop"></div>
+<div id="brush-cursor"></div>
+
+<div id="app-alert-modal" class="overlay-modal">
+    <div class="overlay-box" id="app-alert-box" style="text-align: center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('app-alert-modal').style.display='none'">×</button>
+        <h3 id="app-alert-title" style="margin-top:0; font-size:20px; text-transform:uppercase;">Notice</h3>
+        <p id="app-alert-text" style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px; white-space: pre-wrap;"></p>
+        <button class="action-btn" id="app-alert-btn" style="width:auto; padding:12px 30px; margin:0 auto;" onclick="document.getElementById('app-alert-modal').style.display='none'">OKAY</button>
+    </div>
+</div>
+
+<div id="dpi-warning-modal" class="overlay-modal">
+    <div class="overlay-box" style="border-color: var(--danger-red); text-align: center;">
+        <h3 style="color:var(--danger-red); margin-top:0; font-size:22px; text-transform:uppercase;">Resolution Warning</h3>
+        <p id="dpi-warning-text" style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px;"></p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="action-btn btn-secondary" style="width:auto; padding:12px 20px; margin:0;" onclick="window.openHelpModal()">NEED HELP?</button>
+            <button class="action-btn" style="background:var(--danger-red); width:auto; padding:12px 30px; margin:0;" onclick="document.getElementById('dpi-warning-modal').style.display='none'">I UNDERSTAND</button>
+        </div>
+    </div>
+</div>
+
+<div id="ai-warning-modal" class="overlay-modal">
+    <div class="overlay-box" style="border-color: var(--brand-hover); text-align: center;">
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:22px; text-transform:uppercase;">AI Frame Break</h3>
+        <p style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px;">
+            This magical feature securely sends your artwork to a powerful cloud server to accurately separate the main character from the background!<br><br>
+            It usually takes <strong>5 to 10 seconds</strong> to process.
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="action-btn btn-secondary" style="width:auto; padding:12px 20px; margin:0;" onclick="document.getElementById('ai-warning-modal').style.display='none'">CANCEL</button>
+            <button class="action-btn" style="background:var(--brand-hover); width:auto; padding:12px 30px; margin:0;" onclick="window.runAutoFrameBreak()">PROCEED</button>
+        </div>
+    </div>
+</div>
+
+<div id="ai-upscale-modal" class="overlay-modal">
+    <div class="overlay-box" style="border-color: var(--brand-hover); text-align: center;">
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:22px; text-transform:uppercase;">Cloud AI Enhancer</h3>
+        <p id="ai-upscale-desc" style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px;">
+            We will securely send your image to a powerful cloud server to magically redraw the missing pixels and double the resolution for perfect printing!<br><br>
+            It usually takes <strong>5 to 10 seconds</strong>.
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="action-btn btn-secondary" style="width:auto; padding:12px 20px; margin:0;" onclick="document.getElementById('ai-upscale-modal').style.display='none'">CANCEL</button>
+            <button class="action-btn" style="background:var(--brand-hover); width:auto; padding:12px 30px; margin:0;" onclick="window.runAutoUpscale()">PROCEED</button>
+        </div>
+    </div>
+</div>
+
+<div id="ai-success-modal" class="overlay-modal">
+    <div class="overlay-box" style="border-color: var(--success-green); text-align: center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('ai-success-modal').style.display='none'">×</button>
+        <h3 style="color:var(--success-green); margin-top:0; font-size:20px; text-transform:uppercase;">Enhancement Complete</h3>
+        <p style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px;">
+            Your image has been successfully upscaled and optimized for high-quality printing!
+        </p>
+        <button class="action-btn" style="background:var(--success-green); width:auto; padding:12px 30px; margin:0 auto;" onclick="document.getElementById('ai-success-modal').style.display='none'">AWESOME</button>
+    </div>
+</div>
+
+<div id="url-paste-modal" class="overlay-modal">
+    <div class="overlay-box" style="text-align: center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('url-paste-modal').style.display='none'">×</button>
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:20px; text-transform:uppercase;">🔗 Import from Web</h3>
+        <p style="color:var(--brand-text-sec); font-size:13px; margin-bottom:20px;">Paste a direct link to an image (ending in .jpg, .png, .webp) to load it onto the canvas.</p>
+        <input type="text" id="paste-url-input" class="ui-select" placeholder="https://example.com/image.jpg" style="margin-bottom: 15px;" />
+        <button class="action-btn" style="background:var(--brand-hover);" onclick="window.submitUrlPaste()">IMPORT IMAGE</button>
+    </div>
+</div>
+
+<div id="url-to-cart-modal" class="overlay-modal">
+    <div class="overlay-box" style="text-align: center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('url-to-cart-modal').style.display='none'">×</button>
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:20px; text-transform:uppercase;">🔗 Paste Image URL</h3>
+        <p style="color:var(--brand-text-sec); font-size:13px; margin-bottom:20px;">Paste a direct link to your image file. It will be processed and added straight to your cart — no editor required.</p>
+        <input type="text" id="url-to-cart-input" class="ui-select" placeholder="https://example.com/image.jpg" style="margin-bottom: 15px;" />
+        <button id="url-to-cart-btn" class="action-btn" style="background:var(--brand-hover);" onclick="window.submitUrlToCart()">ADD TO CART</button>
+        <p id="url-to-cart-status" style="color:var(--brand-text-sec); font-size:12px; margin-top:12px; min-height:16px;"></p>
+    </div>
+</div>
+
+<div id="help-modal" class="overlay-modal">
+    <div class="overlay-box">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('help-modal').style.display='none'">×</button>
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:20px; text-transform:uppercase;">Customer Support</h3>
+        <p style="color:var(--brand-text-sec); font-size:13px; margin-bottom:20px;">Need help ensuring your art prints perfectly? Send us a message and we'll assist you!</p>
+        <form method="post" action="/contact" accept-charset="UTF-8" style="display:flex; flex-direction:column; gap:10px;">
+            <input type="hidden" name="form_type" value="contact" />
+            <input type="hidden" name="utf8" value="✓" />
+            <input type="text" name="contact[name]" placeholder="Your Name" required class="ui-select" style="margin:0; padding:10px;" />
+            <input type="email" name="contact[email]" placeholder="Your Email" required class="ui-select" style="margin:0; padding:10px;" />
+            <textarea name="contact[body]" placeholder="How can we help?" required class="ui-select" style="margin:0; padding:10px; height:80px; resize:none;"></textarea>
+            <button type="submit" class="action-btn" style="margin-top:5px;">SEND MESSAGE</button>
+        </form>
+    </div>
+</div>
+
+<div id="bleed-confirm-modal" class="overlay-modal">
+    <div class="overlay-box" style="border-color:var(--danger-red); text-align:center;">
+        <h3 style="color:var(--danger-red); margin-top:0; font-size:22px; text-transform:uppercase;">⚠️ Artwork Does Not Cover Canvas</h3>
+        <p style="color:var(--brand-text-sec); font-size:14px; line-height:1.6; margin-bottom:25px;">
+            Your artwork does not extend to the edges of the canvas.<br><br>
+            <strong style="color:#fff;">This will result in white borders on your printed mat.</strong><br><br>
+            Scale your artwork outward so it fills the entire canvas — including the red bleed area — to avoid white borders.
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button class="action-btn" style="background:var(--danger-red); width:auto; padding:12px 24px; margin:0;" onclick="window._closeBleedConfirm()">← GO BACK AND FIX</button>
+            <button class="action-btn" style="background:rgba(255,255,255,0.15); width:auto; padding:12px 20px; margin:0; font-size:12px;" onclick="window._proceedDespiteBleed()">Proceed anyway (I accept white borders)</button>
+        </div>
+    </div>
+</div>
+
+<div id="share-result-modal" class="overlay-modal">
+    <div class="overlay-box" style="text-align:center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('share-result-modal').style.display='none'">×</button>
+        <h3 style="color:var(--brand-hover); margin-top:0; font-size:20px; text-transform:uppercase;">🔗 Share Your Design</h3>
+        <p style="color:var(--brand-text-sec); font-size:13px; margin-bottom:10px;">Your design is hosted at:</p>
+        <input type="text" id="share-url-out" class="ui-select" readonly style="margin-bottom:10px; cursor:text;" />
+        <p id="share-expiry-text" style="color:var(--brand-text-sec); font-size:11px; margin-bottom:20px;"></p>
+        <button class="action-btn" style="background:var(--brand-hover);" onclick="navigator.clipboard.writeText(document.getElementById('share-url-out').value).then(()=>{this.textContent='COPIED ✓'})">COPY LINK</button>
+    </div>
+</div>
+
+<div id="get-printed-modal" class="overlay-modal">
+    <div class="overlay-box" style="text-align:center;">
+        <button style="position:absolute; top:15px; right:15px; background:none; border:none; color:var(--brand-text-sec); font-size:20px; cursor:pointer;" onclick="document.getElementById('get-printed-modal').style.display='none'">×</button>
+        <h3 style="color:var(--success-green); margin-top:0; font-size:20px; text-transform:uppercase;">📋 Ready to Print!</h3>
+        <p style="color:var(--brand-text-sec); font-size:13px; margin-bottom:10px;">Your print-ready file is hosted at:</p>
+        <input type="text" id="get-printed-url-out" class="ui-select" readonly style="margin-bottom:10px; cursor:text;" />
+        <p id="get-printed-expiry-text" style="color:var(--brand-text-sec); font-size:11px; margin-bottom:20px;"></p>
+        <a id="get-printed-link" href="#" target="_blank" class="action-btn" style="background:var(--success-green); text-decoration:none;">OPEN PRINT FILE</a>
+    </div>
+</div>
+
+<div id="designer-visibility-wrapper" style="display:none;"><div class="designer-container-wrap">
+
+    <div id="landing-ui">
+        <p style="color: #444; font-size: 14px; margin-bottom: 30px;">Select your edge style above, then upload your work below.</p>
+
+        <span class="landing-label" style="color: var(--brand-hover);">CHOOSE EDITOR</span>
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button class="action-btn btn-landing-simple" style="max-width: 200px; padding: 15px;" onclick="window.triggerSimpleFlow()">QUICK UPLOAD</button>
+            <button class="action-btn btn-landing-adv" style="max-width: 200px; padding: 15px;" onclick="window.triggerAdvancedFlow()">ADVANCED EDITOR</button>
+            <button class="action-btn" style="max-width: 200px; padding: 15px; background:#888; border-color:#888;" onclick="window.openUrlToCartModal()">PASTE URL</button>
+        </div>
+
+        <input type="file" id="simple-file-in" accept="image/*" style="display:none;" onchange="window.handleSimpleUpload(this)">
+    </div>
+
+    <div id="simple-backdrop">
+        <div id="simple-modal">
+            <div id="simple-header">
+                <span style="font-weight:600; font-size:22px; color:var(--brand-hover); text-transform:uppercase; letter-spacing:1px; font-family:'Rubik', sans-serif;">Playmat Studio <span style="font-size:16px; color:#ffffff; font-weight:600; font-family:'Rubik', sans-serif; letter-spacing:1px; text-transform:uppercase;">| Quick Upload</span></span>
+                <button class="action-btn btn-secondary" style="width:auto; padding: 6px 12px; margin:0; font-size:12px;" onclick="window.restartApp()">RESTART</button>
+            </div>
+
+            <div id="simple-canvas-wrap">
+                <div id="simple-canvas-inner">
+                    <canvas id="s-main-canvas"></canvas>
+                    <canvas id="s-layout-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; opacity: 1;"></canvas>
+                </div>
+            </div>
+
+            <div id="simple-info-bar" class="canvas-info-bar">
+                <span id="si-size">Mat size: —</span>
+                <span id="si-dpi">Image DPI: —</span>
+                <span><span class="info-red">Red area:</span> Bleed — cut off during production</span>
+                <span><span class="info-yellow">Yellow area:</span> Safe Zone — Keep essential items out of this zone.</span>
+            </div>
+
+            <div id="simple-tools">
+                <div class="simple-tool-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px; align-items:start;">
+                    <div>
+                        <label style="color: var(--brand-hover); font-size:11px; font-weight:bold; text-transform:uppercase; display:block; margin-bottom:10px;">Artwork & Filters</label>
+                        <div style="display:flex; width:100%; gap:8px; margin-bottom:15px;">
+                            <button class="action-btn" style="flex:2;" onclick="document.getElementById('simple-file-in').click()">📁 UPLOAD FILE</button>
+                            <button class="action-btn btn-secondary" style="flex:1; font-size:11px;" onclick="window.promptPasteUrl()">🔗 PASTE URL</button>
+                        </div>
+                        <div style="display:flex; width:100%; gap:10px; align-items:center; margin-bottom:15px;">
+                            <input type="range" id="s-zoom-in" min="0.1" max="2.5" step="0.01" value="1" oninput="window.handleSimpleZoom(this.value)" style="flex:2;">
+                            <button class="action-btn btn-secondary" style="flex:1; font-size:11px; padding: 10px;" onclick="window.rotateSimpleArt()">↻ ROTATE</button>
+                            <button class="action-btn btn-secondary" style="flex:1; font-size:11px; padding: 10px;" onclick="window.forceSimpleFit()">[ ] FIT</button>
+                        </div>
+                        <div style="display:flex; width:100%; gap:8px;">
+                            <button id="s-btn-enhance" class="action-btn btn-secondary" style="flex:1; font-size:11px; padding:10px;" onclick="window.toggleSimpleFilter('enhance')">🪄 ENHANCE</button>
+                            <button id="s-btn-grayscale" class="action-btn btn-secondary" style="flex:1; font-size:11px; padding:10px;" onclick="window.toggleSimpleFilter('grayscale')">◑ GRAYSCALE</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="color: var(--brand-hover); font-size:11px; font-weight:bold; text-transform:uppercase; display:block; margin-bottom:10px;">Game Layouts (Optional)</label>
+                        <select id="s-game-sel" class="ui-select" style="margin:0; margin-bottom:10px;" onchange="window.filterSimpleFormats()"><option value="">-- Select Game (Optional) --</option></select>
+                        <select id="s-format-sel" class="ui-select hidden-field" style="margin:0; margin-bottom:10px;" onchange="window.filterSimpleHands()"></select>
+                        <select id="s-hand-sel" class="ui-select hidden-field" style="margin:0; margin-bottom:10px;" onchange="window.applySimpleLayout()"></select>
+                        <div id="s-rb-extras-wrap" class="hidden-field" style="margin-bottom:10px;">
+                            <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Points Overlay</label>
+                            <select id="s-rb-points-sel" class="ui-select" style="margin:0; padding:8px;" onchange="window.changeRbPoints()">
+                                <option value="none">None</option>
+                                <option value="basic">Basic Points</option>
+                                <option value="basic_1_14">Basic Points 1-14</option>
+                                <option value="project">Project Points</option>
+                                <option value="project_1_14">Project Points 1-14</option>
+                                <option value="lunar">Lunar Points</option>
+                                <option value="lunar_1_14">Lunar Points 1-14</option>
+                                <option value="khasino">Khasino Points</option>
+                            </select>
+                        </div>
+                        <div id="s-color-wrap" class="hidden-field">
+                            <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Zone Color</label>
+                            <input type="color" id="s-col" value="#ffffff" oninput="window.renderSimpleLayout()" class="color-swatch" style="height:38px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top:20px;">
+                    <div id="simple-bleed-warning" class="bleed-warning-banner">
+                        ⚠️ Artwork does not cover the full canvas. White borders will appear on your printed mat.<br>
+                        Scale your artwork to fill the entire canvas including the red bleed area.
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <button class="action-btn btn-secondary" style="width:auto; margin:0; font-size:11px;" onclick="window.toggleSimpleGuides()">SHOW/HIDE PRINT GUIDES</button>
+                        <button id="simple-atc" class="action-btn" style="width:250px; height:50px; font-size:16px; margin:0;" onclick="window.submitSimpleCart()">ADD TO CART</button>
+                    </div>
+                </div>
+                <div style="text-align:center; padding-top: 15px;">
+                    <span class="disclaimer-text">All trademarks and copyrights are owned by their respective owners. We make no claim to ownership of their intellectual property.</span>
+                </div>
+            </div>
+        </div>
+        <div class="version-tag">v1.7.1</div>
+    </div>
+
+    <div id="adv-backdrop">
+    <div id="playmat-tool-root">
+        <div id="sidebar">
+            <div class="studio-title-wrap">
+                <h2 class="studio-title">Playmat Studio</h2>
+                <span class="studio-subtitle">Advanced Editor <span class="beta-badge" style="font-size:9px; vertical-align:middle;">BETA</span></span>
+            </div>
+            <div class="sidebar-header">
+                <button class="action-btn btn-secondary" style="margin:0;" onclick="window.restartApp()">RESTART</button>
+                <button id="fs-toggle-btn" class="action-btn" style="margin:0; background: var(--brand-hover);" onclick="window.toggleFullScreen()">FULL SCREEN</button>
+            </div>
+
+            <button class="acc-btn" onclick="window.toggleAcc('acc-size')">ARTWORK <span>▼</span></button>
+            <div id="acc-size" class="acc-content" style="display:block;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button class="action-btn" style="flex:2;" onclick="window.triggerUpload()">📁 UPLOAD FILE</button>
+                    <button class="action-btn btn-secondary" style="flex:1; font-size:11px;" onclick="window.promptPasteUrl()">🔗 PASTE URL</button>
+                </div>
+                <input type="file" id="adv-file-in" accept="image/*" style="display:none;" onchange="window.handleUpload(this)">
+                <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <label style="font-size: 11px; color: var(--brand-text-sec); display: block; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Image Quality</label>
+                    <button id="ai-upscale-btn-adv" class="action-btn btn-secondary" style="border: 1px solid var(--brand-hover); color: var(--brand-hover); line-height: 1.2; width: 100%;" onclick="window.confirmAutoUpscale(true)">
+                        ✨ ENHANCE QUALITY <span class="beta-badge">BETA</span>
+                    </button>
+                </div>
+                <div style="margin-top: 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                    <label style="font-size: 12px; color: var(--brand-text-sec); display: block; margin-bottom: 10px;">No artwork? Try a solid color:</label>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <input type="color" id="bg-color-picker" value="#000000" oninput="window.syncHex('bg-color-picker','bg-color-hex'); window.setSolidBackground(this.value)" class="color-swatch" style="width: 50px;">
+                        <input type="text"  id="bg-color-hex"    value="#000000" oninput="window.syncColor('bg-color-hex','bg-color-picker'); window.setSolidBackground(this.value)" class="ui-select" style="width: 90px; padding: 8px; font-size: 13px;">
+                    </div>
+                </div>
+            </div>
+
+            <button class="acc-btn" onclick="window.toggleAcc('acc-layout')">GAME LAYOUT <span>▼</span></button>
+            <div id="acc-layout" class="acc-content">
+                <select id="game-sel" class="ui-select" onchange="window.filterFormats()"><option value="">-- Select Game (Optional) --</option></select>
+                <select id="format-sel" class="ui-select hidden-field" style="margin-top:10px;" onchange="window.filterHands()"></select>
+                <select id="hand-sel"   class="ui-select hidden-field" style="margin-top:10px;" onchange="window.applyLayout()"></select>
+                <div id="rb-extras-wrap" class="hidden-field" style="margin-top:10px;">
+                    <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Points Overlay</label>
+                    <select id="rb-points-sel" class="ui-select" style="padding:8px;" onchange="window.changeRbPoints()">
+                        <option value="none">None</option>
+                        <option value="basic">Basic Points</option>
+                        <option value="basic_1_14">Basic Points 1-14</option>
+                        <option value="project">Project Points</option>
+                        <option value="project_1_14">Project Points 1-14</option>
+                        <option value="lunar">Lunar Points</option>
+                        <option value="lunar_1_14">Lunar Points 1-14</option>
+                        <option value="khasino">Khasino Points</option>
+                    </select>
+                </div>
+                <div id="color-wrap" class="hidden-field" style="margin-top:10px;">
+                    <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Zone Color</label>
+                    <div class="inner-panel" style="display:flex; gap:10px; align-items:center; padding:10px; margin-bottom:0;">
+                        <div style="flex:0 0 auto;">
+                            <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:4px;">Solid</label>
+                            <input type="color" id="zone-col" value="#ffffff" oninput="window.syncHex('zone-col','zone-col-hex'); window.renderLayout()" class="color-swatch" style="width:50px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:4px;">Hex</label>
+                            <input type="text" id="zone-col-hex" value="#ffffff" oninput="window.syncColor('zone-col-hex','zone-col'); window.renderLayout()" class="ui-select" style="padding:8px; font-size:13px;">
+                        </div>
+                    </div>
+                    <div id="gradient-wrap" class="hidden-field" style="margin-top:10px;">
+                        <div class="inner-panel" style="padding:10px; margin-bottom:0;">
+                            <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                                <div style="flex:1;">
+                                    <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:4px;">Color 2</label>
+                                    <input type="color" id="zone-col2" value="#000000" oninput="window.syncHex('zone-col2','zone-col2-hex'); window.renderLayout()" class="color-swatch" style="width:50px;">
+                                </div>
+                                <div style="flex:1;">
+                                    <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:4px;">Hex</label>
+                                    <input type="text" id="zone-col2-hex" value="#000000" oninput="window.syncColor('zone-col2-hex','zone-col2'); window.renderLayout()" class="ui-select" style="padding:8px; font-size:13px;">
+                                </div>
+                            </div>
+                            <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Gradient Angle</label>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="range" id="gradient-angle" min="0" max="360" value="0" oninput="window.renderLayout()" style="flex:1;">
+                                <span id="gradient-angle-val" style="font-size:12px; width:30px; text-align:right; color:var(--brand-text-pri);">0°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="toggle-wrap" style="margin-top:10px;">
+                        <label class="switch"><input type="checkbox" id="gradient-toggle" onchange="window.toggleGradient()"><span class="slider"></span></label>
+                        <span class="toggle-label">Use Gradient</span>
+                    </div>
+                    <div class="toggle-wrap">
+                        <label class="switch"><input type="checkbox" id="opacity-toggle" onchange="window.toggleZoneOpacity()"><span class="slider"></span></label>
+                        <span class="toggle-label">Hide Zone Overlay</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="acc-btn" onclick="window.toggleAcc('acc-ai')">AI TOOLS <span>▼</span></button>
+            <div id="acc-ai" class="acc-content">
+                <div class="inner-panel">
+                    <span class="panel-title">AI FRAME BREAK</span>
+                    <button id="ai-bg-btn" class="action-btn btn-secondary" style="border:1px solid var(--brand-hover); color:var(--brand-hover); line-height:1.2;" onclick="window.confirmFrameBreak()">
+                        🖼️ REMOVE BACKGROUND <span class="beta-badge">BETA</span>
+                    </button>
+                    <div id="fg-controls" class="hidden-field" style="margin-top:10px;">
+                        <div style="display:flex; gap:8px; margin-bottom:10px;">
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0; font-size:11px;" onclick="window.toggleFgVisibility()">SHOW/HIDE FG</button>
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0; font-size:11px; background:var(--danger-red)!important; border-color:var(--danger-red)!important;" onclick="window.clearFg()">CLEAR FG</button>
+                        </div>
+                        <div class="slider-row" style="margin-top:0;">
+                            <label>Foreground Position X</label>
+                            <input type="range" id="fg-x" min="-200" max="200" value="0" oninput="window.moveFg()">
+                            <label style="margin-top:10px;">Foreground Position Y</label>
+                            <input type="range" id="fg-y" min="-200" max="200" value="0" oninput="window.moveFg()">
+                            <label style="margin-top:10px;">Foreground Scale</label>
+                            <input type="range" id="fg-scale" min="0.5" max="2" step="0.01" value="1" oninput="window.scaleFg()">
+                        </div>
+                    </div>
+                </div>
+                <div class="inner-panel">
+                    <span class="panel-title">ERASER</span>
+                    <button id="eraser-toggle-btn" class="action-btn btn-secondary btn-eraser" onclick="window.toggleMaskMode()">ENABLE ERASER</button>
+                    <div id="eraser-controls" class="hidden-field" style="margin-top:10px;">
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <div style="flex:1;">
+                                <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Brush Size</label>
+                                <input type="range" id="eraser-size" min="5" max="200" value="40" oninput="window.updateBrushSize()" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Shape</label>
+                                <select id="brush-shape" class="ui-select" style="padding:8px; font-size:12px;" onchange="window.updateBrushShape()">
+                                    <option value="round">Round</option>
+                                    <option value="square">Square</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.undoErase()">UNDO</button>
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.resetErase()">RESET</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="inner-panel">
+                    <span class="panel-title">ZONE RECOLORING</span>
+                    <button id="recolor-toggle-btn" class="action-btn btn-secondary btn-recolor" onclick="window.toggleRecolorMode()">ENABLE RECOLOR BRUSH</button>
+                    <div id="recolor-controls" class="hidden-field">
+                        <div style="display:flex; gap:10px; margin-bottom:10px; margin-top:10px;">
+                            <div style="flex:1;">
+                                <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Brush Size</label>
+                                <input type="range" id="recolor-size" min="5" max="100" value="30" oninput="window.updateRecolorBrush()" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Paint Color</label>
+                                <input type="color" id="recolor-color" value="#ff0000" class="color-swatch" style="width:50px; height:30px;" oninput="window.updateRecolorBrush()">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.undoRecolor()">UNDO</button>
+                            <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.resetRecolor()">RESET</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="acc-btn" onclick="window.toggleAcc('acc-art')">ADJUSTMENTS <span>▼</span></button>
+            <div id="acc-art" class="acc-content">
+                <div class="inner-panel">
+                    <span class="panel-title">PRINT COLOR CORRECTION</span>
+                    <p style="font-size:11px; color:var(--brand-text-sec); line-height:1.4; margin-bottom:15px; margin-top:0;">
+                        Images on digital screens look much brighter than physical ink. Use Auto-Optimize to calibrate your art for printing!
+                    </p>
+                    <button id="auto-opt-btn-adv" class="action-btn btn-secondary" style="border: 1px solid var(--brand-hover); color: var(--brand-hover); margin-bottom:15px;" onclick="window.autoOptimizePrintAdv()">🪄 AUTO-OPTIMIZE FOR PRINT</button>
+                    <div class="slider-row" style="margin-top:0;">
+                        <label>Brightness</label>
+                        <input type="range" id="filter-brightness" min="-0.3" max="0.3" step="0.01" value="0" oninput="window.updateFilters()">
+                        <label style="margin-top:10px;">Contrast</label>
+                        <input type="range" id="filter-contrast" min="-0.3" max="0.3" step="0.01" value="0" oninput="window.updateFilters()">
+                        <label style="margin-top:10px;">Saturation</label>
+                        <input type="range" id="filter-saturation" min="-0.5" max="0.5" step="0.01" value="0" oninput="window.updateFilters()">
+                    </div>
+                    <button class="action-btn btn-secondary" style="margin-top:15px; font-size:11px; padding:8px;" onclick="window.resetFilters()">RESET COLORS</button>
+                </div>
+                <div class="slider-row">
+                    <label>Art Scale</label>
+                    <input type="range" id="zoom-in" min="0.1" max="2.5" step="0.01" value="1" oninput="window.handleZoom(this.value)" style="width:100%;">
+                    <button class="action-btn btn-secondary" style="margin-top:15px;" onclick="window.forceFit()">RESET ART SCALE & CENTER</button>
+                </div>
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:20px 0;">
+                <div class="inner-panel">
+                    <span class="panel-title">TEXT & TRANSFORMATIONS</span>
+                    <button class="action-btn" style="background: var(--brand-hover); margin-bottom:15px;" onclick="window.addAdvText()">+ ADD TEXT</button>
+                    <div id="adv-text-tools" class="hidden-field" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:6px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                        <select id="adv-font-family" class="ui-select" onchange="window.updateAdvTextAttr('fontFamily', this.value)">
+                            <option value="Rubik">Rubik</option>
+                            <option value="Bangers">Bangers</option>
+                            <option value="Oswald">Oswald</option>
+                            <option value="Permanent Marker">Marker</option>
+                            <option value="Cinzel">Cinzel</option>
+                            <option value="Pacifico">Pacifico</option>
+                        </select>
+                        <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Font Size</label>
+                        <input type="range" id="adv-text-size-in" min="10" max="200" value="40" oninput="window.updateAdvTextAttr('fontSize', parseInt(this.value, 10))" style="width:100%; margin-bottom:15px;">
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1;"><label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Fill</label><input type="color" id="adv-text-col" class="color-swatch" value="#ffffff" oninput="window.updateAdvTextAttr('fill', this.value)"></div>
+                            <div style="flex:1;"><label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px;">Outline</label><input type="color" id="adv-text-stroke" class="color-swatch" value="#000000" oninput="window.updateAdvTextAttr('stroke', this.value)"></div>
+                        </div>
+                        <button class="action-btn" style="background:var(--danger-red); margin-top:15px;" onclick="window.removeAdvActive()">DELETE SELECTED</button>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-bottom: 15px;">
+                        <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.transformActive('rotate')">ROTATE 90°</button>
+                        <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.transformActive('flipX')">FLIP H</button>
+                        <button class="action-btn btn-secondary" style="flex:1; margin:0;" onclick="window.transformActive('flipY')">FLIP V</button>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom: 15px;">
+                        <input type="range" id="transform-rotation" min="-180" max="180" value="0" oninput="window.transformActive('angle', this.value)" style="flex:1;">
+                        <span id="rotation-val" style="font-size: 13px; width: 35px; text-align: right; color:var(--brand-text-pri);">0°</span>
+                    </div>
+                    <button class="action-btn btn-secondary" style="margin:0;" onclick="window.transformActive('angle', 0)">RESET ROTATION</button>
+                </div>
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:20px 0;">
+                <button class="action-btn btn-secondary" style="margin-top:10px;" onclick="window.toggleAdvGuides()">SHOW/HIDE PRINT GUIDES</button>
+            </div>
+
+            <div style="flex-grow: 1;"></div>
+
+            <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div id="adv-bleed-warning" class="bleed-warning-banner">
+                    ⚠️ Artwork does not cover the full canvas. White borders will appear on your printed mat.<br>
+                    Scale your artwork to fill the entire canvas including the red bleed area.
+                </div>
+                <button id="sidebar-atc" class="action-btn" style="height: 60px; width: 100%; font-size: 16px;" onclick="window.submitToCart('adv')">ADD TO CART</button>
+                <div style="text-align:center; padding-top: 15px;">
+                    <span class="disclaimer-text">All trademarks and copyrights are owned by their respective owners. We make no claim to ownership of their intellectual property.</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="canvas-column">
+            <div id="zoom-toolbar">
+                <span style="color: var(--brand-text-sec); font-size: 12px; font-weight:bold; letter-spacing:1px; margin-right: 5px;">VIEW:</span>
+                <button class="action-btn btn-secondary" style="margin:0; padding: 6px 14px; font-size:16px; width:auto;" onclick="window.workspaceZoom(0.1)">+</button>
+                <button class="action-btn btn-secondary" style="margin:0; padding: 6px 14px; font-size:16px; width:auto;" onclick="window.workspaceZoom(-0.1)">-</button>
+                <button class="action-btn btn-secondary" style="margin:0; padding: 6px 12px; width:auto;" onclick="window.workspaceZoom(0)">RESET</button>
+            </div>
+            <div id="canvas-wrapper">
+                <canvas id="main-canvas"></canvas>
+                <canvas id="layout-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; opacity: 1;"></canvas>
+                <canvas id="fg-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 20; opacity: 1;"></canvas>
+                <div id="recolor-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 30; pointer-events: none; mask-size: 100% 100%; -webkit-mask-size: 100% 100%;">
+                    <canvas id="recolor-canvas"></canvas>
+                </div>
+                <div id="eraser-interaction" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none;"></div>
+            </div>
+            <div id="adv-info-bar" class="canvas-info-bar">
+                <span id="ai-size">Mat size: —</span>
+                <span id="ai-dpi">Image DPI: —</span>
+                <span><span class="info-red">Red area:</span> Bleed — cut off during production</span>
+                <span><span class="info-yellow">Yellow area:</span> Safe Zone — Keep essential items out of this zone.</span>
+            </div>
+        </div>
+    </div>
+    <div class="version-tag" style="color:rgba(255,255,255,0.2); z-index:10001;">v1.7.1</div>
+    </div><!-- /#adv-backdrop -->
+</div>
+</div><!-- /#designer-visibility-wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"
+        integrity="sha512-CeIsOAsgJnmevfCi2C6/3QMBlmN7n4JnkFjzFBCZm1G9yFZSFKuBBM/zKWMW5Qa7zJGNFBr/BpC98/A8dHEg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+{%- comment %}
+  The main editor JS is loaded after Fabric.js and after the bootstrap has had
+  a chance to fire the 'playmat:config-ready' event. The editor JS reads
+  window.PLAYMAT_* overrides (set by the bootstrap) before falling back to
+  its own built-in constants, so app-admin settings take effect without a
+  theme deployment.
+{%- endcomment %}
+{{ 'playmat-designer.js' | asset_url | script_tag }}
+
+{% schema %}
+{
+  "name": "Playmat Designer",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "App Backend URL",
+      "info": "Your Railway app URL (e.g. https://playmat-studio.railway.app). Leave blank to use built-in defaults. Set once at install — no need to change per-product.",
+      "placeholder": "https://your-app.railway.app"
+    },
+    {
+      "type": "select",
+      "id": "mat_size",
+      "label": "Mat Size (fallback)",
+      "info": "Used only if this product ID is not in the app's Product→Size map. Standard = 24.5\" x 14.5\", Extended = 28.5\" x 14.5\".",
+      "options": [
+        { "value": "standard", "label": "Standard (24.5\" x 14.5\")" },
+        { "value": "extended", "label": "Extended (28.5\" x 14.5\")" }
+      ],
+      "default": "standard"
+    },
+    {
+      "type": "text",
+      "id": "trigger_variant",
+      "label": "Show only for variant (Option 1 text)",
+      "info": "Leave blank to always show the designer. Enter the exact Option 1 value (e.g. 'Custom Artwork') to only show when that variant is selected. Case-insensitive.",
+      "placeholder": "e.g. Custom Artwork"
+    },
+    {
+      "type": "range",
+      "id": "landing_padding",
+      "label": "Button area top/bottom padding (px)",
+      "min": 0,
+      "max": 80,
+      "step": 2,
+      "default": 10
+    },
+    {
+      "type": "text",
+      "id": "size_variant_keyword",
+      "label": "Extended mat variant keyword",
+      "info": "If this product has both Standard and Extended variants, enter a keyword from the Extended variant title (e.g. '28' or 'Extended'). Leave blank if single-size."
+    }
+  ]
+}
+{% endschema %}
