@@ -34,6 +34,9 @@
     window.CLOUDFLARE_UPLOAD_URL    = w.upload   || 'https://playmat-r2-upload.salve.workers.dev/';
     window.CLOUDFLARE_WORKER_URL    = w.upscale  || 'https://playmat-upscaler.salve.workers.dev';
     window.CLOUDFLARE_BG_WORKER_URL = w.bgRemove || 'https://playmat-removebg.salve.workers.dev/';
+    // Host URL used by the Share and Get Printed upload flow.
+    // Stores the file for 7 days and returns a public URL.
+    window.CLOUDFLARE_HOST_URL      = w.host     || 'https://files.playmatstudio.com/';
 
     // Override the SIZE_DB, product maps, and layout data used by the editor.
     // The editor reads these from the window object when they are present,

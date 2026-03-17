@@ -109,9 +109,14 @@ export function getEffectiveSettings(shop) {
   const stored = getSettings(shop) ?? {};
   return {
     workerUrls: stored.workerUrls ?? {
-      upload:   process.env.DEFAULT_CLOUDFLARE_UPLOAD_URL ?? 'https://playmat-r2-upload.salve.workers.dev/',
-      upscale:  process.env.DEFAULT_CLOUDFLARE_WORKER_URL ?? 'https://playmat-upscaler.salve.workers.dev',
+      upload:   process.env.DEFAULT_CLOUDFLARE_UPLOAD_URL    ?? 'https://playmat-r2-upload.salve.workers.dev/',
+      upscale:  process.env.DEFAULT_CLOUDFLARE_WORKER_URL    ?? 'https://playmat-upscaler.salve.workers.dev',
       bgRemove: process.env.DEFAULT_CLOUDFLARE_BG_WORKER_URL ?? 'https://playmat-removebg.salve.workers.dev/',
+      // Hosting URL for the Share / Get Printed flow (files.playmatstudio.com)
+      // This is separate from the cart-upload worker — it stores the file for
+      // 7 days and returns a public URL the customer can share or send to a
+      // print shop directly.
+      host:     process.env.DEFAULT_CLOUDFLARE_HOST_URL ?? 'https://files.playmatstudio.com/',
     },
     sizeDb:              stored.sizeDb ?? DEFAULT_SIZE_DB,
     productSizeMap:      stored.productSizeMap ?? DEFAULT_PRODUCT_SIZE_MAP,

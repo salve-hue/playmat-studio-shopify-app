@@ -163,6 +163,14 @@ function render() {
         <input type="url" id="url-bgremove" value="${esc(s.workerUrls.bgRemove)}"
           oninput="settings.workerUrls.bgRemove = this.value"
           placeholder="https://playmat-removebg.yourdomain.workers.dev/" />
+        <label>Share / Get Printed Host URL <span style="font-size:11px; color:#6d7175; font-weight:400;">(Upload URL button)</span></label>
+        <input type="url" id="url-host" value="${esc(s.workerUrls.host || '')}"
+          oninput="settings.workerUrls.host = this.value"
+          placeholder="https://files.playmatstudio.com/" />
+        <p style="font-size:12px; color:#6d7175; margin:4px 0 0;">
+          Used by the <strong>Share</strong> and <strong>Get Printed</strong> flows — uploads the print file and returns a 7-day public URL.
+          This is separate from the R2 Upload Worker (which is used for cart add-to-cart submissions).
+        </p>
       </div>
     </div>
 
