@@ -47,7 +47,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: new SQLiteSessionStorage(join(__dirname, 'data/sessions.db')),
+  sessionStorage: new SQLiteSessionStorage(join(__dirname, 'db/sessions.db')),
 });
 
 // Register webhook handlers
