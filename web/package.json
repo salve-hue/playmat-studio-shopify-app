@@ -11,7 +11,7 @@
   "dependencies": {
     "@shopify/shopify-api": "^11.0.0",
     "@shopify/shopify-app-express": "^4.0.0",
-    "@shopify/shopify-app-session-storage-sqlite": "^4.0.0",
+    "@shopify/shopify-app-session-storage-memory": "^4.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

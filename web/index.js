@@ -19,7 +19,7 @@ import serveStatic from 'serve-static';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import shopifyPkg from '@shopify/shopify-app-express';
-import { SQLiteSessionStorage } from '@shopify/shopify-app-session-storage-sqlite';
+import { MemorySessionStorage } from '@shopify/shopify-app-session-storage-memory';
 import { webhookHandlers } from './routes/webhooks.js';
 import settingsRouter from './routes/api/settings.js';
 import uploadRouter from './routes/api/upload.js';
@@ -48,7 +48,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: new SQLiteSessionStorage(join(__dirname, 'db/sessions.db')),
+  sessionStorage: new MemorySessionStorage(),
 });
 
 // Register webhook handlers
