@@ -2,13 +2,16 @@
  * Playmat Studio — Shopify App Backend
  * Node.js / Express — deployable on Railway
  *
- * Replaces the Cloudflare Workers proxy and the manual theme-file-edit workflow.
  * Provides:
  *   - Shopify OAuth flow
  *   - Per-store settings API (overlays, product map, worker URLs)
  *   - Upload proxy (Cloudflare R2)
- *   - Admin API orders endpoint (replaces shopify-proxy Worker)
+ *   - Admin API orders endpoint
  *   - Static admin UI (Polaris)
+ *
+ * Session storage:
+ *   - If DATABASE_URL is set (Supabase / any PostgreSQL): uses PostgreSQL
+ *   - Otherwise: falls back to MemorySessionStorage (dev only)
  */
 
 import { config as dotenvConfig } from 'dotenv';
@@ -33,17 +36,31 @@ import serveStatic from 'serve-static';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import shopifyPkg from '@shopify/shopify-app-express';
-import { SQLiteSessionStorage } from '@shopify/shopify-app-session-storage-sqlite';
+import { MemorySessionStorage } from '@shopify/shopify-app-session-storage-memory';
+import { PostgreSQLSessionStorage } from '@shopify/shopify-app-session-storage-postgresql';
 import { webhookHandlers } from './routes/webhooks.js';
 import settingsRouter from './routes/api/settings.js';
 import uploadRouter from './routes/api/upload.js';
 import ordersRouter from './routes/api/orders.js';
+import { getEffectiveSettings } from './db/store.js';
 
 const { shopifyApp } = shopifyPkg;
 const LATEST_API_VERSION = '2025-04';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '8080', 10);
+
+// ── Session storage ───────────────────────────────────────────────────────────
+// Use PostgreSQL (Supabase) when DATABASE_URL is available, otherwise memory.
+// MemorySessionStorage loses sessions on every restart — only use for local dev.
+const sessionStorage = process.env.DATABASE_URL
+  ? new PostgreSQLSessionStorage(process.env.DATABASE_URL)
+  : new MemorySessionStorage();
+
+if (!process.env.DATABASE_URL) {
+  console.warn('[startup] WARNING: Using MemorySessionStorage. Sessions will be lost on restart.');
+  console.warn('[startup]          Set DATABASE_URL (Supabase connection string) for production.');
+}
 
 // ── Shopify app setup ─────────────────────────────────────────────────────────
 
@@ -62,7 +79,7 @@ const shopify = shopifyApp({
   webhooks: {
     path: '/api/webhooks',
   },
-  sessionStorage: new SQLiteSessionStorage(join(__dirname, 'db/sessions.db')),
+  sessionStorage,
 });
 
 // Register webhook handlers
@@ -75,7 +92,6 @@ const app = express();
 // CORS — allow the Shopify admin embed and the storefront
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow Shopify admin embeds, the CDN, and the storefront
     if (!origin
      || origin.includes('.myshopify.com')
      || origin.includes('.shopify.com')
@@ -101,36 +117,47 @@ app.post(shopify.config.webhooks.path, express.raw({ type: 'application/json' })
 // ── JSON body parser for all other routes ────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));
 
-// ── Authenticated API routes ──────────────────────────────────────────────────
-app.use('/api/settings', shopify.validateAuthenticatedSession(), settingsRouter);
-app.use('/api/upload', uploadRouter);           // auth handled inside via Shopify customer token
-app.use('/api/orders', shopify.validateAuthenticatedSession(), ordersRouter);
-
 // ── Public config endpoint ────────────────────────────────────────────────────
-// /api/settings/config is unauthenticated (returns only public config)
-// It's mounted BEFORE the validateAuthenticatedSession middleware above,
-// so we expose it directly:
-import settingsConfigRouter from './routes/api/settings.js';
+// Unauthenticated — called by the Theme App Extension on every storefront page load.
+// Returns only read-only config (no secrets).
 app.get('/api/config', async (req, res) => {
-  const { shop } = req.query;
-  if (!shop || !/^[a-zA-Z0-9-]+\.myshopify\.com$/.test(shop)) {
-    return res.status(400).json({ error: 'Invalid shop parameter' });
+  try {
+    const { shop } = req.query;
+    if (!shop || !/^[a-zA-Z0-9-]+\.myshopify\.com$/.test(shop)) {
+      return res.status(400).json({ error: 'Invalid shop parameter' });
+    }
+    const s = getEffectiveSettings(shop);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json({
+      ok: true,
+      workerUrls:           s.workerUrls,
+      sizeDb:               s.sizeDb,
+      productSizeMap:       s.productSizeMap,
+      alwaysShowProductIds: s.alwaysShowProductIds,
+      layoutRaw:            s.layoutRaw,
+      rbPointsDb:           s.rbPointsDb,
+    });
+  } catch (err) {
+    console.error('GET /api/config error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  // Re-use the /config sub-route logic by forwarding
-  req.url = '/config';
-  settingsConfigRouter(req, res, () => {
-    res.status(404).json({ error: 'Not found' });
-  });
 });
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ ok: true, version: '1.7.1' }));
 
-// ── Admin UI (static files — React + Polaris SPA) ────────────────────────────
+// ── Authenticated API routes ──────────────────────────────────────────────────
+app.use('/api/settings', shopify.validateAuthenticatedSession(), settingsRouter);
+app.use('/api/upload',   uploadRouter);  // auth handled per-request via shop query param
+app.use('/api/orders',   shopify.validateAuthenticatedSession(), ordersRouter);
+
+// ── Admin UI (static files — Polaris SPA) ────────────────────────────────────
 app.use(serveStatic(join(__dirname, 'public/admin'), { index: false }));
 
 app.use('/*', shopify.ensureInstalledOnShop(), async (_req, res) => {
-  res.sendFile(join(__dirname, 'public/admin/index.html'));
+  const html = readFileSync(join(__dirname, 'public/admin/index.html'), 'utf8')
+    .replace('__SHOPIFY_API_KEY__', process.env.SHOPIFY_API_KEY ?? '');
+  res.type('html').send(html);
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
