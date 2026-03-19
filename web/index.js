@@ -25,14 +25,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // ── Startup diagnostics ───────────────────────────────────────────────────────
-console.log('[startup] NODE_ENV         :', process.env.NODE_ENV);
-console.log('[startup] SHOPIFY_API_KEY  :', process.env.SHOPIFY_API_KEY  ? '✓ set' : '✗ MISSING');
+console.log('[startup] NODE_ENV      :', process.env.NODE_ENV);
+console.log('[startup] SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? '✓ set' : '✗ MISSING');
 console.log('[startup] SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? '✓ set' : '✗ MISSING');
-console.log('[startup] HOST             :', process.env.HOST ?? '✗ MISSING');
-console.log('[startup] DATABASE_URL     :', process.env.DATABASE_URL ? '✓ set (PostgreSQL)' : '✗ not set (using MemoryStorage)');
+console.log('[startup] HOST           :', process.env.HOST ?? '✗ MISSING');
 
 import express from 'express';
-import { readFileSync } from 'fs';
 import { join } from 'path';
 import serveStatic from 'serve-static';
 import cookieParser from 'cookie-parser';
