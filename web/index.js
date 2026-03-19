@@ -25,7 +25,8 @@ import settingsRouter from './routes/api/settings.js';
 import uploadRouter from './routes/api/upload.js';
 import ordersRouter from './routes/api/orders.js';
 
-const { shopifyApp, LATEST_API_VERSION } = shopifyPkg;
+const { shopifyApp } = shopifyPkg;
+const LATEST_API_VERSION = '2025-04';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '8080', 10);
