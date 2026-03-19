@@ -1,19 +1,22 @@
 name = "Playmat Studio"
+# client_id: replace with your Shopify API key from Partners dashboard
+# (same value as SHOPIFY_API_KEY env var)
 client_id = "SHOPIFY_API_KEY"
+# application_url: replace with your Railway deployment URL
 application_url = "https://your-app.railway.app"
 embedded = true
 
 [access_scopes]
-# Scopes needed: read orders (for print downloader), write script tags (for theme injection)
 scopes = "read_orders,write_orders,read_products,write_script_tags,read_customers"
 
 [auth]
+# redirect_urls: must include your Railway URL — update before deploying
 redirect_urls = [
   "https://your-app.railway.app/api/auth/callback"
 ]
 
 [webhooks]
-api_version = "2025-01"
+api_version = "2025-04"
 
   [[webhooks.subscriptions]]
   topics = ["app/uninstalled"]

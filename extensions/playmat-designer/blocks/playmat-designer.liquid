@@ -314,7 +314,7 @@
             <div id="acc-layout" class="acc-content">
                 <select id="game-sel" class="ui-select" onchange="window.filterFormats()"><option value="">-- Select Game (Optional) --</option></select>
                 <select id="format-sel" class="ui-select hidden-field" style="margin-top:10px;" onchange="window.filterHands()"></select>
-                <select id="hand-sel"   class="ui-select hidden-field" style="margin-top:10px;" onchange="window.applyLayout()"></select>
+                <select id="hand-sel"   class="ui-select hidden-field" style="margin-top:10px;" onchange="window.applyFinalLayout()"></select>
                 <div id="rb-extras-wrap" class="hidden-field" style="margin-top:10px;">
                     <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Points Overlay</label>
                     <select id="rb-points-sel" class="ui-select" style="padding:8px;" onchange="window.changeRbPoints()">
@@ -328,7 +328,7 @@
                         <option value="khasino">Khasino Points</option>
                     </select>
                 </div>
-                <div id="color-wrap" class="hidden-field" style="margin-top:10px;">
+                <div id="zone-style-wrap" class="hidden-field" style="margin-top:10px;">
                     <label style="font-size:11px; color:var(--brand-text-sec); display:block; margin-bottom:5px; font-weight:bold; text-transform:uppercase;">Zone Color</label>
                     <div class="inner-panel" style="display:flex; gap:10px; align-items:center; padding:10px; margin-bottom:0;">
                         <div style="flex:0 0 auto;">

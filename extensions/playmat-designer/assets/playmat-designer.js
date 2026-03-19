@@ -413,9 +413,8 @@
     // ============================================================
     function applyGradientOrSolidFill(ctx, w, h, mode, c1) {
         if (mode === 'gradient') {
-            const isTrans  = document.getElementById('col-2-trans').checked;
-            const c2       = isTrans ? window.hexToRgba(c1, 0) : document.getElementById('col-2').value;
-            const deg      = parseInt(document.getElementById('angle-in').value, 10) || 0;
+            const c2  = document.getElementById('zone-col2')?.value || '#000000';
+            const deg = parseInt(document.getElementById('gradient-angle')?.value, 10) || 0;
             const angleRad = (deg - 90) * (Math.PI / 180);
             const cx = w / 2, cy = h / 2;
             // FIX 6: Correct radius formula — was (cx*cx + cy*cy) in submitToCart, now unified
@@ -1431,16 +1430,32 @@
         if(match) { APP.activeLayoutUrl=match.url ?? ''; APP.erasedPaths=[]; window.resetRecolor(); document.getElementById('zone-style-wrap').classList.remove('hidden-field'); window.renderLayout(); }
     };
 
-    window.updateOpacity = () => { document.getElementById('layout-canvas').style.opacity = document.getElementById('op-in').value; };
+    window.updateOpacity = () => {
+        const hide = document.getElementById('opacity-toggle')?.checked;
+        document.getElementById('layout-canvas').style.opacity = hide ? '0' : '1';
+    };
+
+    window.toggleGradient = function() {
+        const checked = document.getElementById('gradient-toggle')?.checked;
+        document.getElementById('gradient-wrap')?.classList.toggle('hidden-field', !checked);
+        window.renderLayout();
+    };
+
+    window.toggleZoneOpacity = function() {
+        window.updateOpacity();
+    };
 
     window.renderLayout = function() {
-        const mode = document.getElementById('mode-sel').value;
-        if (mode==='gradient') {
-            const deg=parseInt(document.getElementById('angle-in').value,10)||0;
-            document.getElementById('grad-controls').classList.remove('hidden-field');
-            document.getElementById('angle-val').innerText=deg+'°';
-            document.getElementById('angle-compass').style.transform='rotate('+deg+'deg)';
-        } else { document.getElementById('grad-controls').classList.add('hidden-field'); }
+        const gradToggle = document.getElementById('gradient-toggle');
+        const mode = (gradToggle && gradToggle.checked) ? 'gradient' : 'solid';
+        if (mode === 'gradient') {
+            const deg = parseInt(document.getElementById('gradient-angle')?.value, 10) || 0;
+            document.getElementById('gradient-wrap')?.classList.remove('hidden-field');
+            const angleVal = document.getElementById('gradient-angle-val');
+            if (angleVal) angleVal.innerText = deg + '°';
+        } else {
+            document.getElementById('gradient-wrap')?.classList.add('hidden-field');
+        }
         const lCanvas=document.getElementById('layout-canvas'); if(!lCanvas) return; window.updateOpacity();
         // null = no layout selected at all → clear canvas and bail
         // ''   = Points Only format → fall through to drawFn(null) below
@@ -1452,8 +1467,9 @@
         const isRiftbound=document.getElementById('game-sel').value==='Riftbound';
         const rbPointsVal=isRiftbound?document.getElementById('rb-points-sel').value:'none';
         const hand=document.getElementById('hand-sel').value, format=document.getElementById('format-sel').value;
+        const c1 = document.getElementById('zone-col')?.value || '#ffffff';
 
-        const drawFn = (img) => window.drawLayoutCanvasCore(lCanvas.getContext('2d'), img, lCanvas, document.getElementById('col-1').value, mode, true, isRiftbound, rbPointsVal, hand, format);
+        const drawFn = (img) => window.drawLayoutCanvasCore(lCanvas.getContext('2d'), img, lCanvas, c1, mode, true, isRiftbound, rbPointsVal, hand, format);
         // Points Only format has an empty URL — draw with null image (points strip only)
         if (APP.activeLayoutUrl === '') { drawFn(null); return; }
         if (APP.cachedLayoutUrl===APP.activeLayoutUrl && APP.cachedLayoutImg) { drawFn(APP.cachedLayoutImg); }
@@ -1605,7 +1621,7 @@
         const scale     = printW / APP.canvasW;
 
         const layoutImg   = isAdv ? APP.cachedLayoutImg : APP.s_cachedLayoutImg;
-        const layoutColor = isAdv ? document.getElementById('col-1').value : (document.getElementById('s-col')?.value||'#ffffff');
+        const layoutColor = isAdv ? (document.getElementById('zone-col')?.value||'#ffffff') : (document.getElementById('s-col')?.value||'#ffffff');
         const gameVal     = isAdv ? document.getElementById('game-sel').value   : (document.getElementById('s-game-sel')?.value||'None');
         const handVal     = isAdv ? document.getElementById('hand-sel').value   : (document.getElementById('s-hand-sel')?.value||'N/A');
         const formatVal   = isAdv ? document.getElementById('format-sel').value : (document.getElementById('s-format-sel')?.value||'N/A');
@@ -1679,13 +1695,15 @@
                 tCtx.clip();
                 drawRiftboundLayout(tCtx, layoutImg, printW, printH, handVal, formatVal, rbPointsVal);
                 tCtx.globalCompositeOperation='source-in';
-                const fillMode = isAdv ? document.getElementById('mode-sel').value : 'solid';
+                const gradTog = document.getElementById('gradient-toggle');
+                const fillMode = isAdv ? ((gradTog && gradTog.checked) ? 'gradient' : 'solid') : 'solid';
                 applyGradientOrSolidFill(tCtx, printW, printH, fillMode, layoutColor);
                 tCtx.restore();
             } else {
                 tCtx.drawImage(layoutImg,0,0,printW,printH);
                 tCtx.globalCompositeOperation='source-in';
-                const fillMode = isAdv ? document.getElementById('mode-sel').value : 'solid';
+                const gradTog = document.getElementById('gradient-toggle');
+                const fillMode = isAdv ? ((gradTog && gradTog.checked) ? 'gradient' : 'solid') : 'solid';
                 applyGradientOrSolidFill(tCtx, printW, printH, fillMode, layoutColor);
             }
 
@@ -1697,7 +1715,8 @@
                     path.points.forEach(pt=>tCtx.lineTo(pt.x*scale,pt.y*scale)); tCtx.stroke();
                 });
             }
-            mCtx.save(); mCtx.globalAlpha=isAdv?(document.getElementById('op-in').value||1.0):1.0;
+            const opHide = isAdv && document.getElementById('opacity-toggle')?.checked;
+            mCtx.save(); mCtx.globalAlpha = opHide ? 0 : 1.0;
             mCtx.drawImage(tCanvas,0,0,printW,printH); mCtx.restore();
         }
 
