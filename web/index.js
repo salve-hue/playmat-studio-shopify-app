@@ -28,6 +28,7 @@ console.log('[startup] SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? '�
 console.log('[startup] HOST           :', process.env.HOST ?? '✗ MISSING');
 
 import express from 'express';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import serveStatic from 'serve-static';
 import cookieParser from 'cookie-parser';
@@ -130,7 +131,9 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, version: '1.7.1' }));
 app.use(serveStatic(join(__dirname, 'public/admin'), { index: false }));
 
 app.use('/*', shopify.ensureInstalledOnShop(), async (_req, res) => {
-  res.sendFile(join(__dirname, 'public/admin/index.html'));
+  const html = readFileSync(join(__dirname, 'public/admin/index.html'), 'utf8')
+    .replace('__SHOPIFY_API_KEY__', process.env.SHOPIFY_API_KEY ?? '');
+  res.type('html').send(html);
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
