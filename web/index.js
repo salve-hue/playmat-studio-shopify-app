@@ -11,10 +11,24 @@
  *   - Static admin UI (Polaris)
  */
 
-import 'dotenv/config';
-import express from 'express';
-import { join, dirname } from 'path';
+import { config as dotenvConfig } from 'dotenv';
+import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+// Load .env only in development (Railway injects real env vars at runtime)
+if (process.env.NODE_ENV !== 'production') {
+  const __dir = dirname(fileURLToPath(import.meta.url));
+  dotenvConfig({ path: resolve(__dir, '.env') });
+}
+
+// ── Startup diagnostics ───────────────────────────────────────────────────────
+console.log('[startup] NODE_ENV      :', process.env.NODE_ENV);
+console.log('[startup] SHOPIFY_API_KEY:', process.env.SHOPIFY_API_KEY ? '✓ set' : '✗ MISSING');
+console.log('[startup] SHOPIFY_API_SECRET:', process.env.SHOPIFY_API_SECRET ? '✓ set' : '✗ MISSING');
+console.log('[startup] HOST           :', process.env.HOST ?? '✗ MISSING');
+
+import express from 'express';
+import { join } from 'path';
 import serveStatic from 'serve-static';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
