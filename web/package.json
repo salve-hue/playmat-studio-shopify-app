@@ -1,0 +1,26 @@
+{
+  "name": "playmat-studio-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "build": "echo 'No build step needed'",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@shopify/shopify-api": "^11.0.0",
+    "@shopify/shopify-app-express": "^4.0.0",
+    "@shopify/shopify-app-session-storage-sqlite": "^4.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "serve-static": "^1.16.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
